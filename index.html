@@ -119,8 +119,16 @@
                     <section class="mapping-section">
                         <div class="card">
                             <div class="card__header">
-                                <h3>Country Code Mappings</h3>
-                                <button class="btn btn--secondary btn--sm" id="addCountryBtn">Add Country</button>
+                                <div class="mapping-header">
+                                    <h3 id="countryMappingTitle">Country Code Mappings</h3>
+                                    <div class="mapping-status" id="countryMappingStatus">
+                                        <span class="save-status" id="countrySaveStatus">Loaded from defaults</span>
+                                    </div>
+                                </div>
+                                <div class="mapping-actions-header">
+                                    <button class="btn btn--secondary btn--sm" id="addCountryBtn">Add Country</button>
+                                    <button class="btn btn--primary btn--sm" id="saveCountryBtn">Save Country Mappings</button>
+                                </div>
                             </div>
                             <div class="card__body">
                                 <div class="mapping-table-container">
@@ -153,8 +161,16 @@
                     <section class="mapping-section">
                         <div class="card">
                             <div class="card__header">
-                                <h3>Pay Code Mappings</h3>
-                                <button class="btn btn--secondary btn--sm" id="addPayCodeBtn">Add Pay Code</button>
+                                <div class="mapping-header">
+                                    <h3 id="payCodeMappingTitle">Pay Code Mappings</h3>
+                                    <div class="mapping-status" id="payCodeMappingStatus">
+                                        <span class="save-status" id="payCodeSaveStatus">Loaded from defaults</span>
+                                    </div>
+                                </div>
+                                <div class="mapping-actions-header">
+                                    <button class="btn btn--secondary btn--sm" id="addPayCodeBtn">Add Pay Code</button>
+                                    <button class="btn btn--primary btn--sm" id="savePayCodeBtn">Save Pay Code Mappings</button>
+                                </div>
                             </div>
                             <div class="card__body">
                                 <div class="mapping-table-container">
