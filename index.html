@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to Excel Converter</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>CSV to Excel Converter</h1>
+            <p class="header-subtitle">Convert employee payroll data from CSV to Excel format</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="converter">Converter</button>
+            <button class="tab-btn" data-tab="mappings">Mapping Management</button>
+        </nav>
+
+        <main class="main-content">
+            <!-- Converter Tab -->
+            <div class="tab-content active" id="converter-tab">
+                <!-- File Upload Section -->
+                <section class="upload-section">
+                    <div class="card">
+                        <div class="card__body">
+                            <div class="upload-area" id="uploadArea">
+                                <div class="upload-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17,8 12,3 7,8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <div class="upload-text">
+                                    <h3>Drop CSV file here or click to browse</h3>
+                                    <p>Supports CSV files with employee payroll data</p>
+                                </div>
+                            </div>
+                            <input type="file" id="fileInput" accept=".csv" class="file-input" style="display: none;">
+                            <div class="file-info" id="fileInfo" style="display: none;">
+                                <div class="file-details">
+                                    <strong id="fileName"></strong>
+                                    <span id="fileSize"></span>
+                                </div>
+                                <button class="btn btn--secondary btn--sm" id="removeFile">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Convert Button -->
+                <section class="convert-section">
+                    <button class="btn btn--primary btn--lg btn--full-width btn--disabled" id="convertBtn" disabled>
+                        <span id="convertBtnText">Convert to Excel</span>
+                        <div class="spinner" id="convertSpinner" style="display: none;"></div>
+                    </button>
+                </section>
+
+                <!-- Status Messages -->
+                <section class="status-section" id="statusSection" style="display: none;">
+                    <div class="status-message" id="statusMessage"></div>
+                </section>
+
+                <!-- Data Preview -->
+                <section class="preview-section" id="previewSection" style="display: none;">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>Data Preview</h3>
+                            <span class="preview-count" id="previewCount"></span>
+                        </div>
+                        <div class="card__body">
+                            <div class="table-container">
+                                <table class="preview-table" id="previewTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Country</th>
+                                            <th>Employee Number</th>
+                                            <th>Paygroup</th>
+                                            <th>Effective Date</th>
+                                            <th>Type of Input</th>
+                                            <th>Pay Code</th>
+                                            <th>Pay Code Description</th>
+                                            <th>Amount</th>
+                                            <th>Currency</th>
+                                            <th>Unit</th>
+                                            <th>Region</th>
+                                            <th>Business Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Download Section -->
+                <section class="download-section" id="downloadSection" style="display: none;">
+                    <button class="btn btn--primary btn--lg btn--full-width" id="downloadBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Excel File
+                    </button>
+                </section>
+            </div>
+
+            <!-- Mappings Tab -->
+            <div class="tab-content" id="mappings-tab">
+                <div class="mappings-container">
+                    <!-- Country Mappings Section -->
+                    <section class="mapping-section">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Country Code Mappings</h3>
+                                <button class="btn btn--secondary btn--sm" id="addCountryBtn">Add Country</button>
+                            </div>
+                            <div class="card__body">
+                                <div class="mapping-table-container">
+                                    <table class="mapping-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Country Name</th>
+                                                <th>Country Code</th>
+                                                <th>Currency</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="countryMappingTableBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="json-editor-section mt-16">
+                                    <h4>JSON Editor (Advanced)</h4>
+                                    <textarea class="form-control json-editor" id="countryJsonEditor" rows="8"></textarea>
+                                    <div class="mt-8 flex gap-8">
+                                        <button class="btn btn--secondary btn--sm" id="updateCountryJsonBtn">Update from JSON</button>
+                                        <button class="btn btn--outline btn--sm" id="resetCountryMappingsBtn">Reset to Defaults</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Pay Code Mappings Section -->
+                    <section class="mapping-section">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Pay Code Mappings</h3>
+                                <button class="btn btn--secondary btn--sm" id="addPayCodeBtn">Add Pay Code</button>
+                            </div>
+                            <div class="card__body">
+                                <div class="mapping-table-container">
+                                    <table class="mapping-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Original Pay Code</th>
+                                                <th>EY Pay Code</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="payCodeMappingTableBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="json-editor-section mt-16">
+                                    <h4>JSON Editor (Advanced)</h4>
+                                    <textarea class="form-control json-editor" id="payCodeJsonEditor" rows="6"></textarea>
+                                    <div class="mt-8 flex gap-8">
+                                        <button class="btn btn--secondary btn--sm" id="updatePayCodeJsonBtn">Update from JSON</button>
+                                        <button class="btn btn--outline btn--sm" id="resetPayCodeMappingsBtn">Reset to Defaults</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
