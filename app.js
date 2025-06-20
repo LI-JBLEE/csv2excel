@@ -1,10 +1,21 @@
-// CSV to Excel Converter Application with Mapping Management
+// CSV to Excel Converter Application with Persistent Storage
 
 class CSVToExcelConverter {
     constructor() {
         this.csvData = null;
         this.convertedData = null;
         this.currentTab = 'converter';
+        
+        // Storage keys
+        this.STORAGE_KEYS = {
+            countryMappings: 'csvConverter_countryMappings',
+            payCodeMappings: 'csvConverter_payCodeMappings'
+        };
+        
+        // Unsaved changes tracking
+        this.hasUnsavedCountryChanges = false;
+        this.hasUnsavedPayCodeChanges = false;
+        
         this.init();
     }
 
@@ -15,12 +26,14 @@ class CSVToExcelConverter {
                 this.initializeElements();
                 this.attachEventListeners();
                 this.setupMappings();
+                this.loadSavedMappings();
                 this.renderMappingTables();
             });
         } else {
             this.initializeElements();
             this.attachEventListeners();
             this.setupMappings();
+            this.loadSavedMappings();
             this.renderMappingTables();
         }
     }
@@ -60,6 +73,16 @@ class CSVToExcelConverter {
         this.updatePayCodeJsonBtn = document.getElementById('updatePayCodeJsonBtn');
         this.resetCountryMappingsBtn = document.getElementById('resetCountryMappingsBtn');
         this.resetPayCodeMappingsBtn = document.getElementById('resetPayCodeMappingsBtn');
+        
+        // Save button elements
+        this.saveCountryBtn = document.getElementById('saveCountryBtn');
+        this.savePayCodeBtn = document.getElementById('savePayCodeBtn');
+        
+        // Status elements
+        this.countryMappingTitle = document.getElementById('countryMappingTitle');
+        this.payCodeMappingTitle = document.getElementById('payCodeMappingTitle');
+        this.countrySaveStatus = document.getElementById('countrySaveStatus');
+        this.payCodeSaveStatus = document.getElementById('payCodeSaveStatus');
 
         console.log('Elements initialized');
     }
@@ -88,12 +111,139 @@ class CSVToExcelConverter {
             "Korea": { code: "KR", currency: "KRW" }
         };
 
-        // Current mappings (can be modified by user)
+        // Current mappings (will be loaded from storage or defaults)
         this.payCodeMapping = { ...this.defaultPayCodeMapping };
         this.countryMapping = { ...this.defaultCountryMapping };
 
         // Fixed values
         this.effectiveDate = "2025-06-01";
+    }
+
+    // Storage management methods
+    loadSavedMappings() {
+        try {
+            // Load country mappings
+            const savedCountryMappings = localStorage.getItem(this.STORAGE_KEYS.countryMappings);
+            if (savedCountryMappings) {
+                const parsed = JSON.parse(savedCountryMappings);
+                this.countryMapping = parsed.data || this.defaultCountryMapping;
+                this.updateSaveStatus('country', 'saved', parsed.timestamp);
+            } else {
+                this.updateSaveStatus('country', 'default');
+            }
+
+            // Load pay code mappings
+            const savedPayCodeMappings = localStorage.getItem(this.STORAGE_KEYS.payCodeMappings);
+            if (savedPayCodeMappings) {
+                const parsed = JSON.parse(savedPayCodeMappings);
+                this.payCodeMapping = parsed.data || this.defaultPayCodeMapping;
+                this.updateSaveStatus('payCode', 'saved', parsed.timestamp);
+            } else {
+                this.updateSaveStatus('payCode', 'default');
+            }
+
+            console.log('Mappings loaded from storage');
+        } catch (error) {
+            console.error('Error loading saved mappings:', error);
+            this.showStatus('Error loading saved mappings. Using defaults.', 'warning');
+            this.countryMapping = { ...this.defaultCountryMapping };
+            this.payCodeMapping = { ...this.defaultPayCodeMapping };
+            this.updateSaveStatus('country', 'error');
+            this.updateSaveStatus('payCode', 'error');
+        }
+    }
+
+    saveCountryMappings() {
+        try {
+            const dataToSave = {
+                data: this.countryMapping,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem(this.STORAGE_KEYS.countryMappings, JSON.stringify(dataToSave));
+            this.hasUnsavedCountryChanges = false;
+            this.updateSaveStatus('country', 'saved', dataToSave.timestamp);
+            this.updateMappingTitle('country');
+            this.showStatus('Country mappings saved successfully!', 'success');
+            console.log('Country mappings saved to storage');
+        } catch (error) {
+            console.error('Error saving country mappings:', error);
+            if (error.name === 'QuotaExceededError') {
+                this.showStatus('Storage quota exceeded. Please clear some browser data and try again.', 'error');
+            } else {
+                this.showStatus('Error saving country mappings. Please try again.', 'error');
+            }
+        }
+    }
+
+    savePayCodeMappings() {
+        try {
+            const dataToSave = {
+                data: this.payCodeMapping,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem(this.STORAGE_KEYS.payCodeMappings, JSON.stringify(dataToSave));
+            this.hasUnsavedPayCodeChanges = false;
+            this.updateSaveStatus('payCode', 'saved', dataToSave.timestamp);
+            this.updateMappingTitle('payCode');
+            this.showStatus('Pay code mappings saved successfully!', 'success');
+            console.log('Pay code mappings saved to storage');
+        } catch (error) {
+            console.error('Error saving pay code mappings:', error);
+            if (error.name === 'QuotaExceededError') {
+                this.showStatus('Storage quota exceeded. Please clear some browser data and try again.', 'error');
+            } else {
+                this.showStatus('Error saving pay code mappings. Please try again.', 'error');
+            }
+        }
+    }
+
+    updateSaveStatus(type, status, timestamp = null) {
+        const statusElement = type === 'country' ? this.countrySaveStatus : this.payCodeSaveStatus;
+        if (!statusElement) return;
+
+        statusElement.className = 'save-status';
+        
+        switch (status) {
+            case 'saved':
+                statusElement.className += ' saved';
+                statusElement.textContent = timestamp ? 
+                    `Last saved: ${new Date(timestamp).toLocaleString()}` : 'Saved';
+                break;
+            case 'unsaved':
+                statusElement.className += ' unsaved';
+                statusElement.textContent = 'Unsaved changes';
+                break;
+            case 'default':
+                statusElement.textContent = 'Loaded from defaults';
+                break;
+            case 'error':
+                statusElement.className += ' unsaved';
+                statusElement.textContent = 'Error loading data';
+                break;
+        }
+    }
+
+    updateMappingTitle(type) {
+        const titleElement = type === 'country' ? this.countryMappingTitle : this.payCodeMappingTitle;
+        const hasUnsaved = type === 'country' ? this.hasUnsavedCountryChanges : this.hasUnsavedPayCodeChanges;
+        
+        if (!titleElement) return;
+        
+        const baseTitle = type === 'country' ? 'Country Code Mappings' : 'Pay Code Mappings';
+        titleElement.textContent = hasUnsaved ? `${baseTitle} *` : baseTitle;
+    }
+
+    markAsUnsaved(type) {
+        if (type === 'country') {
+            this.hasUnsavedCountryChanges = true;
+            this.updateSaveStatus('country', 'unsaved');
+        } else {
+            this.hasUnsavedPayCodeChanges = true;
+            this.updateSaveStatus('payCode', 'unsaved');
+        }
+        this.updateMappingTitle(type);
     }
 
     attachEventListeners() {
@@ -207,6 +357,21 @@ class CSVToExcelConverter {
             this.resetPayCodeMappingsBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.resetPayCodeMappings();
+            });
+        }
+
+        // Save button events
+        if (this.saveCountryBtn) {
+            this.saveCountryBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveCountryMappings();
+            });
+        }
+
+        if (this.savePayCodeBtn) {
+            this.savePayCodeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.savePayCodeMappings();
             });
         }
 
@@ -417,7 +582,6 @@ class CSVToExcelConverter {
         data.forEach((row, index) => {
             const employeeNumber = row['Employee Number'] || row['EmployeeNumber'] || row['Employee_Number'] || '';
             const country = row['Country'] || '';
-            // FIX: Read Business Unit from the original CSV file
             const businessUnit = row['Business Unit'] || row['BusinessUnit'] || row['Business_Unit'] || '';
 
             if (!employeeNumber || !country) {
@@ -466,7 +630,7 @@ class CSVToExcelConverter {
                     'Currency': countryInfo.currency,
                     'Unit': 'A',
                     'Region': 'APAC',
-                    'Business Unit': businessUnit // Use the actual value from CSV
+                    'Business Unit': businessUnit
                 };
 
                 transformedRows.push(transformedRow);
@@ -570,10 +734,10 @@ class CSVToExcelConverter {
                 </td>
             `;
             
-            // Add change listeners with better input handling
+            // Add change listeners
             tr.querySelectorAll('input').forEach(input => {
                 input.addEventListener('focus', (e) => {
-                    e.target.select(); // Select all text on focus for easier editing
+                    e.target.select();
                 });
                 
                 input.addEventListener('blur', (e) => {
@@ -582,7 +746,7 @@ class CSVToExcelConverter {
                 
                 input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
-                        e.target.blur(); // Trigger blur event to save changes
+                        e.target.blur();
                     }
                 });
             });
@@ -612,10 +776,10 @@ class CSVToExcelConverter {
                 </td>
             `;
             
-            // Add change listeners with better input handling
+            // Add change listeners
             tr.querySelectorAll('input').forEach(input => {
                 input.addEventListener('focus', (e) => {
-                    e.target.select(); // Select all text on focus for easier editing
+                    e.target.select();
                 });
                 
                 input.addEventListener('blur', (e) => {
@@ -624,7 +788,7 @@ class CSVToExcelConverter {
                 
                 input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
-                        e.target.blur(); // Trigger blur event to save changes
+                        e.target.blur();
                     }
                 });
             });
@@ -645,31 +809,33 @@ class CSVToExcelConverter {
         const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '');
         const newCountryName = `NewCountry_${timestamp}`;
         this.countryMapping[newCountryName] = { code: 'XX', currency: 'XXX' };
+        this.markAsUnsaved('country');
         this.renderCountryMappingTable();
         this.updateJsonEditors();
-        this.showStatus('New country mapping added. Please edit the values.', 'info');
+        this.showStatus('New country mapping added. Please edit the values and save.', 'info');
     }
 
     addPayCodeMapping() {
         const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '');
         const newPayCode = `NewPayCode-${timestamp}`;
         this.payCodeMapping[newPayCode] = 'XX';
+        this.markAsUnsaved('payCode');
         this.renderPayCodeMappingTable();
         this.updateJsonEditors();
-        this.showStatus('New pay code mapping added. Please edit the values.', 'info');
+        this.showStatus('New pay code mapping added. Please edit the values and save.', 'info');
     }
 
     updateCountryMapping(originalName, field, value) {
         if (!value.trim()) {
             this.showStatus('Value cannot be empty.', 'error');
-            this.renderCountryMappingTable(); // Reset to original values
+            this.renderCountryMappingTable();
             return;
         }
 
         if (field === 'name' && value !== originalName) {
             if (this.countryMapping[value]) {
                 this.showStatus('Country name already exists.', 'error');
-                this.renderCountryMappingTable(); // Reset to original values
+                this.renderCountryMappingTable();
                 return;
             }
             // Rename the mapping
@@ -681,20 +847,22 @@ class CSVToExcelConverter {
         } else if (field === 'currency') {
             this.countryMapping[originalName].currency = value.toUpperCase();
         }
+        
+        this.markAsUnsaved('country');
         this.updateJsonEditors();
     }
 
     updatePayCodeMapping(originalCode, field, value) {
         if (!value.trim()) {
             this.showStatus('Value cannot be empty.', 'error');
-            this.renderPayCodeMappingTable(); // Reset to original values
+            this.renderPayCodeMappingTable();
             return;
         }
 
         if (field === 'original' && value !== originalCode) {
             if (this.payCodeMapping[value]) {
                 this.showStatus('Pay code already exists.', 'error');
-                this.renderPayCodeMappingTable(); // Reset to original values
+                this.renderPayCodeMappingTable();
                 return;
             }
             // Rename the mapping
@@ -704,12 +872,15 @@ class CSVToExcelConverter {
         } else if (field === 'ey') {
             this.payCodeMapping[originalCode] = value.toUpperCase();
         }
+        
+        this.markAsUnsaved('payCode');
         this.updateJsonEditors();
     }
 
     deleteCountryMapping(countryName) {
         if (confirm(`Are you sure you want to delete the mapping for "${countryName}"?`)) {
             delete this.countryMapping[countryName];
+            this.markAsUnsaved('country');
             this.renderCountryMappingTable();
             this.updateJsonEditors();
             this.showStatus(`Country mapping for "${countryName}" deleted.`, 'success');
@@ -719,6 +890,7 @@ class CSVToExcelConverter {
     deletePayCodeMapping(payCode) {
         if (confirm(`Are you sure you want to delete the mapping for "${payCode}"?`)) {
             delete this.payCodeMapping[payCode];
+            this.markAsUnsaved('payCode');
             this.renderPayCodeMappingTable();
             this.updateJsonEditors();
             this.showStatus(`Pay code mapping for "${payCode}" deleted.`, 'success');
@@ -746,8 +918,9 @@ class CSVToExcelConverter {
             }
             
             this.countryMapping = newMappings;
+            this.markAsUnsaved('country');
             this.renderCountryMappingTable();
-            this.showStatus('Country mappings updated successfully from JSON.', 'success');
+            this.showStatus('Country mappings updated successfully from JSON. Remember to save your changes.', 'success');
         } catch (error) {
             this.showStatus(`JSON Error: ${error.message}`, 'error');
         }
@@ -765,28 +938,39 @@ class CSVToExcelConverter {
             }
             
             this.payCodeMapping = newMappings;
+            this.markAsUnsaved('payCode');
             this.renderPayCodeMappingTable();
-            this.showStatus('Pay code mappings updated successfully from JSON.', 'success');
+            this.showStatus('Pay code mappings updated successfully from JSON. Remember to save your changes.', 'success');
         } catch (error) {
             this.showStatus(`JSON Error: ${error.message}`, 'error');
         }
     }
 
     resetCountryMappings() {
-        if (confirm('Are you sure you want to reset all country mappings to defaults? This will lose any custom changes.')) {
+        const message = this.hasUnsavedCountryChanges ? 
+            'You have unsaved changes. Are you sure you want to reset all country mappings to defaults? This will lose any unsaved changes.' :
+            'Are you sure you want to reset all country mappings to defaults?';
+            
+        if (confirm(message)) {
             this.countryMapping = { ...this.defaultCountryMapping };
+            this.markAsUnsaved('country');
             this.renderCountryMappingTable();
             this.updateJsonEditors();
-            this.showStatus('Country mappings reset to defaults.', 'success');
+            this.showStatus('Country mappings reset to defaults. Remember to save your changes.', 'success');
         }
     }
 
     resetPayCodeMappings() {
-        if (confirm('Are you sure you want to reset all pay code mappings to defaults? This will lose any custom changes.')) {
+        const message = this.hasUnsavedPayCodeChanges ? 
+            'You have unsaved changes. Are you sure you want to reset all pay code mappings to defaults? This will lose any unsaved changes.' :
+            'Are you sure you want to reset all pay code mappings to defaults?';
+            
+        if (confirm(message)) {
             this.payCodeMapping = { ...this.defaultPayCodeMapping };
+            this.markAsUnsaved('payCode');
             this.renderPayCodeMappingTable();
             this.updateJsonEditors();
-            this.showStatus('Pay code mappings reset to defaults.', 'success');
+            this.showStatus('Pay code mappings reset to defaults. Remember to save your changes.', 'success');
         }
     }
 
@@ -822,6 +1006,6 @@ class CSVToExcelConverter {
     }
 }
 
-// Initialize the application and make it globally accessible
+// Initialize the application
 console.log('Script loaded, initializing converter...');
 const app = new CSVToExcelConverter();
